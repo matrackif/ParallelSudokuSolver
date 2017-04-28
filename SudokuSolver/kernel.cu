@@ -6,7 +6,7 @@
 
 #define BOARD_SIZE 9
 #define SUB_BOARD_SIZE 3
-#define MAX_NUM_BOARDS 32768 // 2 ^ 15 
+#define MAX_NUM_BOARDS 200000 // 2 ^ 15 
 #define NUM_ELEMENTS_PER_BOARD 81
 
 ///<summary>Returns an index used to access a 1D array, board[index3D(boardIdx, row, col)] == board[boardIdx][row][col]</summary>
@@ -240,7 +240,7 @@ __global__ void createPartialSolutionUsingBFS(
 	int tid = blockDim.x * blockIdx.x + threadIdx.x; // represents the current sudoku board index
 													 //We have this condition so we do not overwrite the new set of valid boards
 
-	while (tid < numOfOldBoards && tid < MAX_NUM_BOARDS)
+	while (tid < numOfOldBoards)
 	{
 		bool foundNewBoard = false;
 		// This loop starts at the first index of the board at index tid and loops through the whole board until its last element
@@ -316,7 +316,7 @@ __global__ void sudokuBacktrack(
 	int tid = blockDim.x * blockIdx.x + threadIdx.x;
 	int numOfEmptyFieldsInThisBoard;
 
-	while ((*finished == 0) && tid < numOfBoards && tid < MAX_NUM_BOARDS)
+	while ((*finished == 0) && tid < numOfBoards)
 	{
 		numOfEmptyFieldsInThisBoard = numOfEmptyFields[tid];
 
