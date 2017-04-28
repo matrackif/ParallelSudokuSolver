@@ -238,7 +238,7 @@ __global__ void createPartialSolutionUsingBFS(
 	int *numOfEmptyFields)
 {
 	int tid = blockDim.x * blockIdx.x + threadIdx.x; // represents the current sudoku board index
-	//We have this condition so we do not overwrite the new set of valid boards
+													 //We have this condition so we do not overwrite the new set of valid boards
 
 	while (tid < numOfOldBoards && tid < MAX_NUM_BOARDS)
 	{
@@ -371,13 +371,14 @@ __global__ void sudokuBacktrack(
 cudaError_t runParallelSudoku(
 	const int numThreadsPerBlk,
 	const int numBlocks,
-	int *inputBoard)
+	int *inputBoard,
+	char* boardName)
 {
 	cudaError_t cudaStatus; // The return value of CUDA-library functions
 	int bfsIterations = 20; // Number of times to run BFS to find some new valid boards
 	int bfsBoardCount = 0; // The number of new boards we have found after a call to createPartialSolutionUsingBFS()
 	int *boardIndex; // Must start at 0 every time
-	// The meaning of the variables below has been described in the comments above createPartialSolutionUsingBFS() and sudokuBacktrack()
+					 // The meaning of the variables below has been described in the comments above createPartialSolutionUsingBFS() and sudokuBacktrack()
 	int *numOfEmptyFields;
 	int *finished = nullptr;
 	int *newBoards;
@@ -472,7 +473,12 @@ cudaError_t runParallelSudoku(
 			goto Error;
 		}
 		printf("Number of new boards found after iteration %d: %d\n", i, bfsBoardCount);
-
+		if (bfsBoardCount > MAX_NUM_BOARDS)
+		{
+			std::cout << "Too many boards found in BFS, " << bfsBoardCount << " is greater than " << MAX_NUM_BOARDS << std::endl;
+			bfsBoardCount = MAX_NUM_BOARDS;
+			break;
+		}
 		cudaStatus = cudaMemset(boardIndex, 0, sizeof(int));
 		if (cudaStatus != cudaSuccess)
 		{
@@ -526,7 +532,7 @@ cudaError_t runParallelSudoku(
 		goto Error;
 	}
 
-	printf("Solved board! \n");
+	printf("Solved %s! \n", boardName);
 	printBoard(solvedBoard);
 	std::cout << "Is solved board valid? " << (isBoardValid(solvedBoard) ? "yes" : "no") << std::endl;
 Error:
@@ -552,7 +558,7 @@ int main(int argc, char** argv)
 		7,1,3,6,2,0,0,4,0,
 		0,0,0,0,6,0,5,2,3,
 		1,0,2,0,0,9,0,8,0,
-		3,0,6,0,0,2,0,0,0};
+		3,0,6,0,0,2,0,0,0 };
 	int mediumInputBoard[NUM_ELEMENTS_PER_BOARD] = {
 		0,9,7,0,0,0,0,0,0,
 		0,0,0,0,7,0,0,0,3,
@@ -562,7 +568,7 @@ int main(int argc, char** argv)
 		0,0,4,3,8,0,9,5,0,
 		8,0,0,2,6,0,1,0,0,
 		9,0,0,0,4,0,0,0,0,
-		0,0,0,0,0,0,6,7,0};
+		0,0,0,0,0,0,6,7,0 };
 	int hardInputBoard[NUM_ELEMENTS_PER_BOARD] = {
 		0,0,0,0,0,0,0,5,0,
 		0,4,5,0,0,1,0,0,0,
@@ -572,7 +578,7 @@ int main(int argc, char** argv)
 		0,0,4,6,0,3,0,8,0,
 		8,0,6,0,5,0,0,0,3,
 		0,0,0,3,0,0,5,7,0,
-		0,3,0,0,0,0,0,0,0};
+		0,3,0,0,0,0,0,0,0 };
 	int veryHardInputBoard[NUM_ELEMENTS_PER_BOARD] = {
 		3,0,0,0,0,2,0,0,0,
 		0,4,6,0,0,0,0,0,0,
@@ -582,7 +588,7 @@ int main(int argc, char** argv)
 		0,0,0,4,7,0,0,0,2,
 		0,9,0,0,3,5,8,0,0,
 		0,0,0,0,0,0,9,5,0,
-		0,0,0,8,0,0,0,0,4};
+		0,0,0,8,0,0,0,0,4 };
 	int allZeros[NUM_ELEMENTS_PER_BOARD] = {
 		0,0,0,0,0,0,0,0,0,
 		0,0,0,0,0,0,0,0,0,
@@ -593,6 +599,19 @@ int main(int argc, char** argv)
 		0,0,0,0,0,0,0,0,0,
 		0,0,0,0,0,0,0,0,0,
 		0,0,0,0,0,0,0,0,0 };
+	int hardForBruteForce[NUM_ELEMENTS_PER_BOARD] = {
+		0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,3,0,8,5,
+		0,0,1,0,2,0,0,0,0,
+		0,0,0,5,0,7,0,0,0,
+		0,0,4,0,0,0,1,0,0,
+		0,9,0,0,0,0,0,0,0,
+		5,0,0,0,0,0,0,7,3,
+		0,0,2,0,1,0,0,0,0,
+		0,0,0,0,4,0,0,0,9
+	};
+
+
 	if (argc != 3)
 	{
 		printf("Usage: argv[1] is threads per block, argv[2] is num of blocks\n");
@@ -618,48 +637,54 @@ int main(int argc, char** argv)
 	printBoard(veryHardInputBoard);
 	std::cout << "Is very hard board valid? " << (isBoardValid(veryHardInputBoard) ? "yes" : "no") << std::endl;
 	/////////////
+	printf("Hard for brute force board: \n");
+	printBoard(hardForBruteForce);
+	std::cout << "Is hard for brute force board valid? " << (isBoardValid(hardForBruteForce) ? "yes" : "no") << std::endl;
+	/////////////
 	cudaError_t cudaStatus = cudaSetDevice(0);
 	if (cudaStatus != cudaSuccess)
 	{
 		fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
 		return 1;
-	}		
-	runParallelSudoku(threadsPerBlock, maxBlocks, easyInputBoard);
-	// Check for any errors launching the kernel
-	cudaStatus = cudaGetLastError();
-	if (cudaStatus != cudaSuccess)
-	{
-		fprintf(stderr, "bfs kernel launch failed for easy board: %s\n", cudaGetErrorString(cudaStatus));
-	}	
-	runParallelSudoku(threadsPerBlock, maxBlocks, mediumInputBoard);
-	// Check for any errors launching the kernel
-	cudaStatus = cudaGetLastError();
-	if (cudaStatus != cudaSuccess)
-	{
-	fprintf(stderr, "bfs kernel launch failed for medium board: %s\n", cudaGetErrorString(cudaStatus));
 	}
-	runParallelSudoku(threadsPerBlock, maxBlocks, hardInputBoard);
+	runParallelSudoku(threadsPerBlock, maxBlocks, easyInputBoard, "Easy board");
 	// Check for any errors launching the kernel
 	cudaStatus = cudaGetLastError();
 	if (cudaStatus != cudaSuccess)
 	{
-		fprintf(stderr, "bfs kernel launch failed for hard board: %s\n", cudaGetErrorString(cudaStatus));
+		fprintf(stderr, "kernel launch failed for easy board: %s\n", cudaGetErrorString(cudaStatus));
 	}
-	runParallelSudoku(threadsPerBlock, maxBlocks, veryHardInputBoard);
-	// Check for any errors launching the kernel
+	runParallelSudoku(threadsPerBlock, maxBlocks, mediumInputBoard, "Medium board");
 	cudaStatus = cudaGetLastError();
 	if (cudaStatus != cudaSuccess)
 	{
-		fprintf(stderr, "bfs kernel launch failed for very hard: %s\n", cudaGetErrorString(cudaStatus));
+		fprintf(stderr, "kernel launch failed for medium board: %s\n", cudaGetErrorString(cudaStatus));
 	}
-	runParallelSudoku(threadsPerBlock, maxBlocks, allZeros);
-	// Check for any errors launching the kernel
+	runParallelSudoku(threadsPerBlock, maxBlocks, hardInputBoard, "Hard for human board");
 	cudaStatus = cudaGetLastError();
 	if (cudaStatus != cudaSuccess)
 	{
-		fprintf(stderr, "bfs kernel launch failed for all zeros: %s\n", cudaGetErrorString(cudaStatus));
+		fprintf(stderr, "kernel launch failed for hard board: %s\n", cudaGetErrorString(cudaStatus));
 	}
-	
+	runParallelSudoku(threadsPerBlock, maxBlocks, veryHardInputBoard, "Very hard for human board");
+	cudaStatus = cudaGetLastError();
+	if (cudaStatus != cudaSuccess)
+	{
+		fprintf(stderr, "kernel launch failed for very hard: %s\n", cudaGetErrorString(cudaStatus));
+	}
+	runParallelSudoku(threadsPerBlock, maxBlocks, allZeros, "All zeros board");
+	cudaStatus = cudaGetLastError();
+	if (cudaStatus != cudaSuccess)
+	{
+		fprintf(stderr, "kernel launch failed for all zeros: %s\n", cudaGetErrorString(cudaStatus));
+	}
+	runParallelSudoku(threadsPerBlock, maxBlocks, hardForBruteForce, "Hard for brute force board");
+	cudaStatus = cudaGetLastError();
+	if (cudaStatus != cudaSuccess)
+	{
+		fprintf(stderr, "kernel launch failed for hard for brute force board: %s\n", cudaGetErrorString(cudaStatus));
+	}
+
 	// cudaDeviceReset must be called before exiting in order for profiling and
 	// tracing tools such as Nsight and Visual Profiler to show complete traces.
 	cudaStatus = cudaDeviceReset();
@@ -670,5 +695,3 @@ int main(int argc, char** argv)
 	}
 	return 0;
 }
-
-
