@@ -345,7 +345,7 @@ __global__ void sudokuBacktrack(
 			{
 				// We have filled all empty fields in the board with valid values so we have solved the board
 				*finished = 1;
-				printf("Thread at index %d has solved the board \n", tid);
+				//printf("Thread at index %d has solved the board \n", tid);
 				//Copy board to solvedBoard, which will later be copied back the host
 				for (int r = 0; r < BOARD_SIZE; r++)
 				{
@@ -500,22 +500,26 @@ cudaError_t runParallelSudoku(
 	/////////////////////////////////////////////
 
 	cudaStatus = cudaMemcpy(&bfsBoardCount, boardIndex, sizeof(int), cudaMemcpyDeviceToHost);
-	if (cudaStatus != cudaSuccess) {
+	if (cudaStatus != cudaSuccess) 
+	{
 		fprintf(stderr, "cudaMemcpy failed for boardIndex -> bfsBoardCount! Before sudoku backtrack");
 		goto Error;
 	}
 	cudaStatus = cudaMalloc(&finished, sizeof(int));
-	if (cudaStatus != cudaSuccess) {
+	if (cudaStatus != cudaSuccess) 
+	{
 		fprintf(stderr, "cudaMalloc failed for finished! ");
 		goto Error;
 	}
 	cudaStatus = cudaMalloc(&dev_solvedBoard, NUM_ELEMENTS_PER_BOARD * sizeof(int));
-	if (cudaStatus != cudaSuccess) {
+	if (cudaStatus != cudaSuccess) 
+	{
 		fprintf(stderr, "cudaMalloc failed for dev_solvedBoard! ");
 		goto Error;
 	}
 	cudaStatus = cudaMemset(finished, 0, sizeof(int));
-	if (cudaStatus != cudaSuccess) {
+	if (cudaStatus != cudaSuccess) 
+	{
 		fprintf(stderr, "cudaMemset failed for finished! ");
 		goto Error;
 	}
@@ -678,13 +682,14 @@ int main(int argc, char** argv)
 	{
 		fprintf(stderr, "kernel launch failed for all zeros: %s\n", cudaGetErrorString(cudaStatus));
 	}
+	/*
 	runParallelSudoku(threadsPerBlock, maxBlocks, hardForBruteForce, "Hard for brute force board");
 	cudaStatus = cudaGetLastError();
 	if (cudaStatus != cudaSuccess)
 	{
 		fprintf(stderr, "kernel launch failed for hard for brute force board: %s\n", cudaGetErrorString(cudaStatus));
 	}
-
+	*/
 	// cudaDeviceReset must be called before exiting in order for profiling and
 	// tracing tools such as Nsight and Visual Profiler to show complete traces.
 	cudaStatus = cudaDeviceReset();
